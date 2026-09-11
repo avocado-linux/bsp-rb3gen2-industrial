@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `overlays/qcs6490-rb3gen2-industrial-mezzanine.dtso`.
 
 ### Notes
+- CI targets the 2026 feed only; this board does not ship on 2024.
 - **Not verified on hardware.** Every package is checked to exist in the feed;
   none is checked to bind to a real device. See README.
 - The codec's driver is `wcd937x`, which covers the WCD9370; the SoundWire half
