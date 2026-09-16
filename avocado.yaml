@@ -50,8 +50,8 @@ extensions:
       # --- TPM -----------------------------------------------------------
       # The overlay puts an `st,st33htpm-spi` / `tcg,tpm_tis-spi` on &spi11.
       # This is a DISCRETE TPM on the mezzanine, which makes measured boot and
-      # an encrypted /var possible on this variant the way the SLB9670 does on
-      # the EXMP-Q911 -- and impossible on a core kit alone.
+      # an encrypted /var possible on this variant the way a discrete TPM on a
+      # carrier board does -- and impossible on a core kit alone.
       kernel-module-tpm-tis-spi: '*'
       # The SPI controller behind it. GENI QUP, like every serial engine on
       # this SoC.
