@@ -1,0 +1,89 @@
+default_target: rb3gen2
+supported_targets:
+  - rb3gen2
+
+extensions:
+  # The core-kit BSP this layers on. Declared with a package source so the
+  # resolver knows to fetch it from the target's extension feed; a bare
+  # `depends_on` name that is not defined here fails with "not defined in
+  # `extensions:` and could not be resolved from the target's feed".
+  avocado-bsp-rb3gen2:
+    source:
+      type: package
+      version: "*"
+
+  avocado-bsp-rb3gen2-industrial:
+    version: 0.1.0
+    release: r0
+    types:
+      - sysext
+      - confext
+    summary: "RB3 Gen 2 Industrial Mezzanine — audio, SPI TPM, PCIe"
+    description: >
+      Board support for the industrial mezzanine of the Qualcomm Robotics
+      RB3 Gen 2. Layers on top of avocado-bsp-rb3gen2, which covers the core
+      kit; this extension adds only what the mezzanine itself brings.
+    vendor: "Avocado Linux"
+    license: "MIT"
+
+    # NOT VERIFIED ON HARDWARE. See README -- this is the prepared shape, built
+    # from what upstream's overlay describes, on a mezzanine nobody here has
+    # had on a board. Every package below is checked to exist in the rb3gen2
+    # feed; none is checked to bind to a real device.
+
+    depends_on:
+      - avocado-bsp-rb3gen2
+
+    packages:
+      # --- Audio ---------------------------------------------------------
+      # The overlay declares `qcom,wcd9370-codec`. The driver is wcd937x,
+      # which covers the WCD9370 and WCD9375; there is no wcd9370 module.
+      # Same shape as imx412 driving the IMX577 on the vision mezzanine.
+      kernel-module-snd-soc-wcd937x: '*'
+      # The codec sits on SoundWire, so the sdw half is a separate module and
+      # the codec does not probe without it.
+      kernel-module-snd-soc-wcd937x-sdw: '*'
+      # LPASS macros the overlay enables: &lpass_rx_macro and &lpass_tx_macro.
+      kernel-module-snd-soc-lpass-rx-macro: '*'
+      kernel-module-snd-soc-lpass-tx-macro: '*'
+
+      # --- TPM -----------------------------------------------------------
+      # The overlay puts an `st,st33htpm-spi` / `tcg,tpm_tis-spi` on &spi11.
+      # This is a DISCRETE TPM on the mezzanine, which makes measured boot and
+      # an encrypted /var possible on this variant the way the SLB9670 does on
+      # the EXMP-Q911 -- and impossible on a core kit alone.
+      kernel-module-tpm-tis-spi: '*'
+      # The SPI controller behind it. GENI QUP, like every serial engine on
+      # this SoC.
+      kernel-module-spi-geni-qcom: '*'
+
+    # Load order: the SPI controller before the TPM on it, and the SoundWire
+    # half before the codec that rides on it.
+    modprobe:
+      - spi_geni_qcom
+      - tpm_tis_spi
+      - snd_soc_lpass_rx_macro
+      - snd_soc_lpass_tx_macro
+      - snd_soc_wcd937x_sdw
+      - snd_soc_wcd937x
+
+    on_merge:
+      - udevadm control --reload
+      - udevadm trigger --type=subsystems --action=add --settle
+      - udevadm trigger --type=devices --action=add --settle
+
+    # Same overlay situation as the vision mezzanine: shipped, not declared,
+    # because the Qualcomm flow has no overlay-application step and declaring
+    # it pulls avocado-dtc-overlay-deliver, which this feed lacks. See the
+    # vision extension's README for the full reasoning and the fdtoverlay
+    # evidence.
+    #
+    # device_tree_overlays:
+    #   - name: qcs6490-rb3gen2-industrial-mezzanine
+    #     src: overlays/qcs6490-rb3gen2-industrial-mezzanine.dtso
+
+sdk:
+  image: docker.io/avocadolinux/sdk:{{ env.AVOCADO_DISTRO_RELEASE }}
+
+  packages:
+    nativesdk-erofs-utils: "*"
